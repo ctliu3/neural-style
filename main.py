@@ -4,10 +4,9 @@ import argparse
 import torch
 from vgg19 import VGG19Net
 from utils import load_param
-from torch.autograd import Variable
+from torch.autograd import Variable, Function
 import torch.nn as nn
 import torchvision.transforms as transforms
-import numpy as np
 
 
 parser = argparse.ArgumentParser(description='Style transfer in pytorch')
@@ -25,6 +24,12 @@ parser.add_argument('--loss-beta', type=float, default=5.0,
                     help="ratio in content loss")
 parser.add_argument('--use-cuda', action='store_true', default=True,
                     help='enables CUDA training')
+parser.add_argument('--loss-interval', type=int, default=100,
+                    help='print loss in each fixed interval')
+parser.add_argument('--snapshot-prefix', type=str, default='neural-style',
+                    help="snapshot prefix")
+parser.add_argument('--snap-interval', type=int, default=1000,
+                    help='save model in each fixed interval')
 args = parser.parse_args()
 
 
@@ -71,49 +76,51 @@ def gen_noise_image(content_image):
 
 
 STYLE_LAYER_WEIGHTS = {
-    'conv1_1': 1.0,
-    'conv2_1': 1.0,
-    'conv3_1': 1.0,
-    'conv4_1': 1.5,
-    'conv5_1': 2.0,
+    'conv1_1': 0.2,
+    'conv2_1': 0.2,
+    'conv3_1': 0.2,
+    'conv4_1': 0.2,
+    'conv5_1': 0.2,
 }
 
 
+class StyleLoss(nn.Module):
+
+    def __init__(self, a_out_dict):
+        super(StyleLoss, self).__init__()
+        self.a_out_dict = a_out_dict
+        self.loss_fn = torch.nn.MSELoss()
+        self.A = {}
+        for layer, out in a_out_dict.items():
+            a_out = a_out_dict[layer].detach()
+            N = a_out.size(1)
+            a_out = a_out.view(N, -1)
+            self.A[layer] = torch.mm(a_out, a_out.t())
+
+    def forward(self, x_out_dict):
+        loss = []
+        for layer, A in self.A.items():
+            x_out = x_out_dict[layer]
+
+            _, N, W, H = x_out.size()
+            M = W * H
+            x_out = x_out.view(N, -1)
+            G = torch.mm(x_out, x_out.t())
+            weight = STYLE_LAYER_WEIGHTS[layer]
+            layer_loss = weight * (1. / (4 * M * M * N * N)) * self.loss_fn(G, A)
+            loss.append(layer_loss)
+        return sum(loss)
+
+
 class ContentLoss(nn.Module):
-    pass
 
+    def __init__(self, p_out):
+        super(ContentLoss, self).__init__()
+        self.p_out = p_out
+        self.loss_fn = torch.nn.MSELoss()
 
-def get_style_loss(a_dict, x_dict):
-    # loss = []
-    loss_fn = torch.nn.MSELoss()
-    for layer, out in a_dict.items():
-        a_out = a_dict[layer].detach()
-        x_out = x_dict[layer]
-        weight = STYLE_LAYER_WEIGHTS[layer]
-
-        _, N, W, H = a_out.size()
-        M = W * H
-        a_out = a_out.view(N, -1)
-        x_out = x_out.view(N, -1)
-        G = torch.mm(a_out, a_out.t())
-        A = torch.mm(x_out, x_out.t())
-        # G.mul_(255.)
-        # A.mul_(255.)
-        # G.div_(4 * N * M)
-        # A.div_(4 * N * M)
-        loss = args.loss_beta * weight * (1. / (4*M*M*N*N)) * loss_fn(A, G)
-        # loss = args.loss_beta * 1 * loss_fn(A, G)
-        # print(loss.data[0])
-        loss.backward(retain_variables=True)
-    # print([l.data[0] for l in loss])
-    # return sum(loss)
-
-
-def get_content_loss(p_dict, x_dict):
-    loss_fn = torch.nn.MSELoss()
-    loss = loss_fn(x_dict['conv4_2'], p_dict['conv4_2'].detach())
-    loss.backward()
-    # return loss
+    def forward(self, x_out):
+        return self.loss_fn(x_out, self.p_out)
 
 
 def main():
@@ -148,27 +155,29 @@ def main():
     net.forward(p)
     p_out_dict = net.internals
 
+    style_loss = StyleLoss(a_out_dict)
+    content_loss = ContentLoss(p_out_dict['conv4_2'].detach())
     for t in range(args.niter):
-
         net.run_with_training()
         net.forward(x)
         x_out_dict = net.internals
 
+        loss1 = style_loss.forward(x_out_dict) * args.loss_beta
+        loss2 = content_loss.forward(x_out_dict['conv4_2']) * args.loss_alpha
+        loss = loss1 + loss2
+
+        if t % args.loss_interval == 0:
+            print('niter:%s, style loss: %s, content loss: %s' % (
+                  t, loss1.data[0], loss2.data[0]))
+
         optimizer.zero_grad()
+        loss.backward(retain_variables=True)
 
-        get_style_loss(a_out_dict, x_out_dict)
-        get_content_loss(p_out_dict, x_out_dict)
-
-        # style_loss = get_style_loss(a_out_dict, x_out_dict)
-        # content_loss = get_content_loss(p_out_dict, x_out_dict)
-        # loss = style_loss * args.loss_alpha + content_loss * args.loss_beta
-        print(t)
-
-        # loss.backward()
         optimizer.step()
 
-    image = postprocess(x)
-    image.save('after.jpg')
+        if t % args.snap_interval == 0:
+            image = postprocess(x)
+            image.save('snap/{}_{}.jpg'.format(args.snapshot_prefix, t))
 
 
 if __name__ == '__main__':
