@@ -22,7 +22,7 @@ parser.add_argument('--loss-alpha', type=float, default=100.0,
                     help="ratio in style loss")
 parser.add_argument('--loss-beta', type=float, default=5.0,
                     help="ratio in content loss")
-parser.add_argument('--use-cuda', action='store_true', default=True,
+parser.add_argument('--use-cuda', action='store_true',
                     help='enables CUDA training')
 parser.add_argument('--loss-interval', type=int, default=100,
                     help='print loss in each fixed interval')
@@ -176,7 +176,7 @@ def main():
         optimizer.step()
 
         if t % args.snap_interval == 0:
-            image = postprocess(x)
+            image = postprocess(x.clone())
             image.save('snap/{}_{}.jpg'.format(args.snapshot_prefix, t))
 
 
