@@ -1,2 +1,2 @@
-style-transfer
+neural-style
 ===
