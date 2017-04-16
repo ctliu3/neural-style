@@ -88,6 +88,8 @@ ENV/
 # Rope project settings
 .ropeproject
 
-.caffemodel
+*.caffemodel
 *.sw[onp]
 *.pth
+output/*.jpg
+snapshot/*.pth

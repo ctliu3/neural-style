@@ -2,6 +2,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+class ForwardType(object):
+    Style = 0
+    Content = 1
+    Train = 2
+
+
 def _alias(id):
     return 'features.%s' % id
 
@@ -45,19 +51,16 @@ class VGG19Net(nn.Module):
         self.conv5_4 = nn.Conv2d(512, 512, 3, padding=1)
         self.conv5_4_alias = _alias(34)
 
-    def run_with_style(self):
-        self.is_style = True
-        self.is_content = False
+    def forward(self, x, typ):
+        if typ == ForwardType.Content:
+            is_style, is_content = False, True
+        elif typ == ForwardType.Style:
+            is_style, is_content = True, False
+        elif typ == ForwardType.Train:
+            is_style, is_content = True, True
+        else:
+            raise Exception('Unknown forward type, {}'.format(type))
 
-    def run_with_content(self):
-        self.is_style = False
-        self.is_content = True
-
-    def run_with_training(self):
-        self.is_style = self.is_content = True
-
-    def forward(self, x):
-        is_style, is_content = self.is_style, self.is_content
         internals = {}
 
         x = F.relu(self.conv1_1(x))
@@ -96,8 +99,7 @@ class VGG19Net(nn.Module):
         x = F.relu(self.conv5_4(x))
         x = F.max_pool2d(F.relu(self.conv5_4(x)), 2, stride=2)
 
-        self.internals = internals
-        return x
+        return internals
 
     def feature_name_map(self):
         d = {}
