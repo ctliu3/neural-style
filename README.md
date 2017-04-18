@@ -7,7 +7,7 @@ Both methods are supported.
 ## How to start
 
 ### Download the pre-trained models
-I use the `VGG16` and `VGG19` as the pre-trained models, which can be downlad [here](https://github.com/jcjohnson/pytorch-vgg). The model is trained in Caffe style, that is, with BGR format in the range [0, 255]. Better to subtract mean [103.939, 116.779, 123.68] before feeding into the network.
+I use the `VGG16` and `VGG19` as the pre-trained models, which can be downloaded [here](https://github.com/jcjohnson/pytorch-vgg). The model is trained in Caffe style, that is, with BGR format in the range [0, 255]. Better to subtract mean [103.939, 116.779, 123.68] before feeding into the network.
 
 ### Download the dataset
 To run the method in the paper [2], you should use extra images. I recommend the [coco dataset](http://mscoco.org/dataset/), which is used in the paper. It contains more than 8000 images. 
