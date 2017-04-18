@@ -47,7 +47,7 @@ class VGG16Net(nn.Module):
         elif typ == ForwardType.Train:
             is_style, is_content = True, True
         else:
-            raise Exception('Unknown forward type, {}'.format(type))
+            raise Exception('Unknown forward type, {}'.format(typ))
 
         internals = {}
 
