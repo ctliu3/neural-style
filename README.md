@@ -16,7 +16,7 @@ To run the method in the paper [2], you should use extra images. I recommend the
 Here is the example of train the fast verion of style transfer
 
 	export CUDA_VISIBLE_DEVICES=0
-	python fast.py \
+	python ./neural-style/fast.py \
 	  --style-image="./images/themuse.jpg" \
 	  --content-image="./images/robot.jpg" \
 	  --loss-style=5 \
