@@ -1,7 +1,7 @@
 
 export CUDA_VISIBLE_DEVICES=0
 
-python neural_style.py --loss-style=10000 \
+python ./neural-style/neural_style.py --loss-style=10000 \
   --loss-feature=1 \
   --loss-interval=100 \
   --pretrained-model="./models/vgg19-d01eb7cb-255.pth" \
