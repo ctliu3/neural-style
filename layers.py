@@ -93,9 +93,10 @@ class FastFeatureLoss(nn.Module):
         self.loss_fn = torch.nn.MSELoss()
 
     def forward(self, x_out_dict, p_out_dict):
-        x_out = x_out_dict['conv3_3']
-        p_out = p_out_dict['conv3_3']
+        x_out = x_out_dict['conv2_2']
+        p_out = p_out_dict['conv2_2']
         p_out = Variable(p_out.data, requires_grad=False)
 
-        _, c, h, w = x_out.size()
-        return self.loss_fn(x_out, p_out) / (c * h * w)
+        # _, c, h, w = x_out.size()
+        # return self.loss_fn(x_out, p_out) / (c * h * w)
+        return self.loss_fn(x_out, p_out)
